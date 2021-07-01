@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="06be3dd8-c5ac-43f8-ad82-196e1e45a844" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="ee6f61cd-0b21-4737-af5c-bb74e792ce6a" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root22" database="sakila" />
+	</db:config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="7d41c075-d70b-4fa6-9f9d-0d0c68d4fba0" >
+		<salesforce:basic-connection username="teshomelake@gmail.com" password="Mariam21" securityToken="CXLn7KQxjUXSlZ8lFPAW3PrnH" />
+	</salesforce:sfdc-config>
+	<flow name="micky-teshe_db-to-sf-connectionFlow" doc:id="371af927-a47e-487c-8cea-88359803a386" >
+		<http:listener doc:name="/get-from-db" doc:id="4a057d3a-2d6b-4413-ac9c-ac5be48e8d8c" config-ref="HTTP_Listener_config" path="/db-to-sf"/>
+		<logger level="INFO" doc:name="Logger" doc:id="ab90f8f5-04c6-4df5-a5dc-64ac82d6896c" message='#["before db"]'/>
+		<db:select doc:name="Select" doc:id="f37e5653-1b0c-45cb-b706-f212ddac0683" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from sakila.payment
+where payment_id<8]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="353357ff-2633-44f4-8180-14acd429253a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ShippingLatitude: payload01.payment_id,
+	ShippingLongitude: payload01.customer_id,
+	AnnualRevenue: payload01.staff_id,
+	NumberOfEmployees: payload01.amount,
+	CreatedDate: payload01.payment_date as DateTime,
+	LastModifiedDate: payload01.last_update as DateTime
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="725bb593-c1c9-40ee-9ae2-5fcee935a91f" message='#["after db"]'/>
+		<salesforce:create type="Account" doc:name="Create" doc:id="2b479078-6575-48e5-98d3-2df92d3f20fe" config-ref="Salesforce_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="b36d0fd0-7e64-4419-8155-938814b99ba1" message='#["successful"]'/>
+		<ee:transform doc:name="Transform Message" doc:id="6eb8fdc0-d9fe-4b9b-ad41-d145822bccef" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
